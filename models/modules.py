@@ -11,6 +11,25 @@ def prenet(inputs, is_training, layer_sizes=[256, 128], scope=None):
       x = tf.layers.dropout(dense, rate=drop_rate, name='dropout_%d' % (i+1))
   return x
 
+def reference_encoder(inputs, filters, kernel_size, strides, encoder_cell, is_training, scope='ref_encoder'):
+  with tf.variable_scope(scope):
+    ref_outputs = tf.expand_dims(inputs,axis=-1)
+    # CNN stack
+    for i, channel in enumerate(filters):
+      ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, tf.nn.relu, is_training, 'conv2d_%d' % i)
+
+    shapes = tf.shape(ref_outputs)
+    ref_outputs = tf.reshape(
+      ref_outputs, 
+      [shapes[0], shapes[1], ref_outputs.get_shape().as_list()[2] * ref_outputs.get_shape().as_list()[3]])
+    # RNN
+    encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
+      encoder_cell,
+      ref_outputs,
+      dtype=tf.float32)
+
+    return tf.tanh(encoder_outputs), encoder_state
+
 
 def encoder_cbhg(inputs, input_lengths, is_training):
   return cbhg(
@@ -99,3 +118,15 @@ def conv1d(inputs, kernel_size, channels, activation, is_training, scope):
       activation=activation,
       padding='same')
     return tf.layers.batch_normalization(conv1d_output, training=is_training)
+
+def conv2d(inputs, filters, kernel_size, strides, activation, is_training, scope):
+  with tf.variable_scope(scope):
+    conv2d_output = tf.layers.conv2d(
+      inputs,
+      filters=filters,
+      kernel_size=kernel_size,
+      strides=strides,
+      padding='same',
+      activation=activation)
+    return tf.layers.batch_normalization(conv2d_output, training=is_training)
+  

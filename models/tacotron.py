@@ -4,7 +4,7 @@ from tensorflow.contrib.seq2seq import BasicDecoder, BahdanauAttention, Attentio
 from text.symbols import symbols
 from util.infolog import log
 from .helpers import TacoTestHelper, TacoTrainingHelper
-from .modules import encoder_cbhg, post_cbhg, prenet
+from .modules import encoder_cbhg, post_cbhg, prenet, reference_encoder
 from .rnn_wrappers import DecoderPrenetWrapper, ConcatOutputAndAttentionWrapper, ZoneoutWrapper
 
 
@@ -38,13 +38,27 @@ class Tacotron():
 
       # Embeddings
       embedding_table = tf.get_variable(
-        'embedding', [len(symbols), 256], dtype=tf.float32,
+        'text_embedding', [len(symbols), 256], dtype=tf.float32,
         initializer=tf.truncated_normal_initializer(stddev=0.5))
       embedded_inputs = tf.nn.embedding_lookup(embedding_table, inputs)           # [N, T_in, 256]
-
+      
+      #Global style tokens (GST)
+      gst_table = tf.get_variable(
+        'style_embedding', [hp.num_gst, 256], dtype=tf.float32,
+        initializer=tf.truncated_normal_initializer(stddev=0.5))
+ 
       # Encoder
       prenet_outputs = prenet(embedded_inputs, is_training)                       # [N, T_in, 128]
       encoder_outputs = encoder_cbhg(prenet_outputs, input_lengths, is_training)  # [N, T_in, 256]
+
+      # Reference encoder
+      _, refnet_outputs = reference_encoder(
+        mel_targets, 
+        filters=[32, 32, 64, 64, 128, 128], 
+        kernel_size=(3,3),
+        strides=(2,2),
+        encoder_cell=GRUCell(128),
+        is_training=is_training)                                                  # [N, 128]
 
       # Attention
       attention_cell = AttentionWrapper(
@@ -89,6 +103,7 @@ class Tacotron():
       self.inputs = inputs
       self.input_lengths = input_lengths
       self.mel_outputs = mel_outputs
+      self.refnet_outputs = refnet_outputs
       self.linear_outputs = linear_outputs
       self.alignments = alignments
       self.mel_targets = mel_targets

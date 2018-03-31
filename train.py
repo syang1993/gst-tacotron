@@ -33,9 +33,9 @@ def add_stats(model):
     tf.summary.scalar('loss_linear', model.linear_loss)
     tf.summary.scalar('learning_rate', model.learning_rate)
     tf.summary.scalar('loss', model.loss)
-    gradient_norms = [tf.norm(grad) for grad in model.gradients]
-    tf.summary.histogram('gradient_norm', gradient_norms)
-    tf.summary.scalar('max_gradient_norm', tf.reduce_max(gradient_norms))
+    #gradient_norms = [tf.norm(grad) for grad in model.gradients]
+    #tf.summary.histogram('gradient_norm', gradient_norms)
+    #tf.summary.scalar('max_gradient_norm', tf.reduce_max(gradient_norms))
     return tf.summary.merge_all()
 
 
@@ -125,7 +125,7 @@ def train(log_dir, args):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--base_dir', default=os.path.expanduser('/home/yangshan/github_rep/tacotron'))
+  parser.add_argument('--base_dir', default=os.path.expanduser('/home/yangshan/tts_workspace/gst-tacotron'))
   parser.add_argument('--input', default='training/train.txt')
   parser.add_argument('--model', default='tacotron')
   parser.add_argument('--name', help='Name of the run. Used for logging. Defaults to model name.')
