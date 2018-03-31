@@ -59,8 +59,6 @@ class Tacotron():
       # Decoder (layers specified bottom to top):
       decoder_cell = MultiRNNCell([
           OutputProjectionWrapper(concat_cell, 256),
-          #ResidualWrapper(GRUCell(256)),
-          #ResidualWrapper(GRUCell(256))
           ResidualWrapper(ZoneoutWrapper(LSTMCell(256), 0.1)),
           ResidualWrapper(ZoneoutWrapper(LSTMCell(256), 0.1))
         ], state_is_tuple=True)                                                  # [N, T_in, 256]

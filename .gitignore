@@ -1,0 +1,10 @@
+__pycache__/
+.cache/
+*.pyc
+.DS_Store
+run*.sh
+training/
+logs*
+data*
+*.zip
+
