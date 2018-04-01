@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import GRUCell
+from util.ops import shape_list
 
 
 def prenet(inputs, is_training, layer_sizes=[256, 128], scope=None):
@@ -18,10 +19,10 @@ def reference_encoder(inputs, filters, kernel_size, strides, encoder_cell, is_tr
     for i, channel in enumerate(filters):
       ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, tf.nn.relu, is_training, 'conv2d_%d' % i)
 
-    shapes = tf.shape(ref_outputs)
+    shapes = shape_list(ref_outputs)
     ref_outputs = tf.reshape(
       ref_outputs, 
-      [shapes[0], shapes[1], ref_outputs.get_shape().as_list()[2] * ref_outputs.get_shape().as_list()[3]])
+      shapes[:-2] + [shapes[2] * shapes[3]])
     # RNN
     encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
       encoder_cell,
@@ -129,4 +130,4 @@ def conv2d(inputs, filters, kernel_size, strides, activation, is_training, scope
       padding='same',
       activation=activation)
     return tf.layers.batch_normalization(conv2d_output, training=is_training)
-  
+

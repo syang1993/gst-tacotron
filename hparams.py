@@ -36,6 +36,7 @@ hparams = tf.contrib.training.HParams(
 
   #Global style token
   num_gst=10,
+  num_heads=4,       # Head number for multi-head attention
 )
 
 

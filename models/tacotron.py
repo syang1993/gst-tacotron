@@ -3,10 +3,11 @@ from tensorflow.contrib.rnn import GRUCell,LSTMCell, MultiRNNCell, OutputProject
 from tensorflow.contrib.seq2seq import BasicDecoder, BahdanauAttention, AttentionWrapper
 from text.symbols import symbols
 from util.infolog import log
+from util.ops import shape_list
 from .helpers import TacoTestHelper, TacoTrainingHelper
 from .modules import encoder_cbhg, post_cbhg, prenet, reference_encoder
 from .rnn_wrappers import DecoderPrenetWrapper, ConcatOutputAndAttentionWrapper, ZoneoutWrapper
-
+from .multihead_attention import MultiheadAttention
 
 
 class Tacotron():
@@ -43,8 +44,8 @@ class Tacotron():
       embedded_inputs = tf.nn.embedding_lookup(embedding_table, inputs)           # [N, T_in, 256]
       
       #Global style tokens (GST)
-      gst_table = tf.get_variable(
-        'style_embedding', [hp.num_gst, 256], dtype=tf.float32,
+      gst_tokens = tf.get_variable(
+        'style_tokens', [hp.num_gst, 256 // hp.num_heads], dtype=tf.float32,
         initializer=tf.truncated_normal_initializer(stddev=0.5))
  
       # Encoder
@@ -59,6 +60,19 @@ class Tacotron():
         strides=(2,2),
         encoder_cell=GRUCell(128),
         is_training=is_training)                                                  # [N, 128]
+
+      # Style attention
+      style_attention = MultiheadAttention(
+        tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
+        tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
+        num_heads=hp.num_heads,
+        linear_trans_for_value=False,
+        key_dim=128,
+        value_dim=256)
+      style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+      style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in 256]
+
+      encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
 
       # Attention
       attention_cell = AttentionWrapper(
@@ -103,13 +117,17 @@ class Tacotron():
       self.inputs = inputs
       self.input_lengths = input_lengths
       self.mel_outputs = mel_outputs
+      self.encoder_outputs = encoder_outputs
       self.refnet_outputs = refnet_outputs
+      self.gst_tokens = gst_tokens
+      self.style_embeddings = style_embeddings
       self.linear_outputs = linear_outputs
       self.alignments = alignments
       self.mel_targets = mel_targets
       self.linear_targets = linear_targets
       log('Initialized Tacotron model. Dimensions: ')
-      log('  embedding:               %d' % embedded_inputs.shape[-1])
+      log('  text embedding:          %d' % embedded_inputs.shape[-1])
+      log('  style embedding:         %d' % style_embeddings.shape[-1])
       log('  prenet out:              %d' % prenet_outputs.shape[-1])
       log('  encoder out:             %d' % encoder_outputs.shape[-1])
       log('  attention out:           %d' % attention_cell.output_size)
