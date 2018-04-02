@@ -59,6 +59,7 @@ def main():
     help='Hyperparameter overrides as a comma-separated list of name=value pairs')
   parser.add_argument('--text', default=None, help='Single test text sentence')
   parser.add_argument('--reference_mel', default=None, help='Reference mel path')
+  parser.add_argument('--mel_targets', default=None, help='Mel-targets path, used when use teacher_force generation')
   args = parser.parse_args()
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
   hparams.parse(args.hparams)

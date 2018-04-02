@@ -9,14 +9,22 @@ from util import audio
 
 
 class Synthesizer:
+  def __init__(self, teacher_forcing_generating=False):
+    self.teacher_forcing_generating = teacher_forcing_generating
   def load(self, checkpoint_path, model_name='tacotron'):
     print('Constructing model: %s' % model_name)
     inputs = tf.placeholder(tf.int32, [1, None], 'inputs')
-    input_lengths = tf.placeholder(tf.int32, [1], 'input_lengths')
-    mel_targets = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'mel_targets')
+    input_lengths = tf.placeholder(tf.int32, [1], 'input_lengths') 
+    reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
+    # Only used in teacher-forcing generating mode
+    if self.teacher_forcing_generating:
+      mel_targets = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'mel_targets')
+    else:
+      mel_targets = None
+
     with tf.variable_scope('model') as scope:
       self.model = create_model(model_name, hparams)
-      self.model.initialize(inputs, input_lengths, mel_targets=mel_targets)
+      self.model.initialize(inputs, input_lengths, mel_targets=mel_targets, reference_mel=reference_mel)
       self.wav_output = audio.inv_spectrogram_tensorflow(self.model.linear_outputs[0])
 
     print('Loading checkpoint: %s' % checkpoint_path)

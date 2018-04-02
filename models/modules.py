@@ -8,7 +8,7 @@ def prenet(inputs, is_training, layer_sizes=[256, 128], scope=None):
   drop_rate = 0.5 if is_training else 0.0
   with tf.variable_scope(scope or 'prenet'):
     for i, size in enumerate(layer_sizes):
-      dense = tf.layers.dense(x, units=size, activation=tf.nn.relu, name='dense_%d' % (i+1))
+      dense = tf.layers.dense(x, units=size, name='dense_%d' % (i+1))
       x = tf.layers.dropout(dense, rate=drop_rate, name='dropout_%d' % (i+1))
   return x
 
@@ -17,7 +17,7 @@ def reference_encoder(inputs, filters, kernel_size, strides, encoder_cell, is_tr
     ref_outputs = tf.expand_dims(inputs,axis=-1)
     # CNN stack
     for i, channel in enumerate(filters):
-      ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, tf.nn.relu, is_training, 'conv2d_%d' % i)
+      ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, is_training, 'conv2d_%d' % i)
 
     shapes = shape_list(ref_outputs)
     ref_outputs = tf.reshape(
@@ -120,7 +120,7 @@ def conv1d(inputs, kernel_size, channels, activation, is_training, scope):
       padding='same')
     return tf.layers.batch_normalization(conv1d_output, training=is_training)
 
-def conv2d(inputs, filters, kernel_size, strides, activation, is_training, scope):
+def conv2d(inputs, filters, kernel_size, strides, is_training, scope):
   with tf.variable_scope(scope):
     conv2d_output = tf.layers.conv2d(
       inputs,
@@ -128,6 +128,7 @@ def conv2d(inputs, filters, kernel_size, strides, activation, is_training, scope
       kernel_size=kernel_size,
       strides=strides,
       padding='same',
-      activation=activation)
-    return tf.layers.batch_normalization(conv2d_output, training=is_training)
+      activation=None)
+    conv2d_output = tf.layers.batch_normalization(conv2d_output, training=is_training)
+    return tf.nn.relu(conv2d_output)
 

@@ -15,7 +15,7 @@ class Tacotron():
     self._hparams = hparams
 
 
-  def initialize(self, inputs, input_lengths, mel_targets=None, linear_targets=None):
+  def initialize(self, inputs, input_lengths, mel_targets=None, linear_targets=None, reference_mel=None):
     '''Initializes the model for inference.
 
     Sets "mel_outputs", "linear_outputs", and "alignments" fields.
@@ -34,6 +34,7 @@ class Tacotron():
     '''
     with tf.variable_scope('inference') as scope:
       is_training = linear_targets is not None
+      is_teacher_force_generating = mel_targets is not None
       batch_size = tf.shape(inputs)[0]
       hp = self._hparams
 
@@ -51,10 +52,16 @@ class Tacotron():
       # Encoder
       prenet_outputs = prenet(embedded_inputs, is_training)                       # [N, T_in, 128]
       encoder_outputs = encoder_cbhg(prenet_outputs, input_lengths, is_training)  # [N, T_in, 256]
+      
+      if is_training:
+        reference_mel = mel_targets
+      elif reference_mel is None:
+        print("TODO: add weight when there is no reference during inference")
+        raise
 
       # Reference encoder
       _, refnet_outputs = reference_encoder(
-        mel_targets, 
+        reference_mel, 
         filters=[32, 32, 64, 64, 128, 128], 
         kernel_size=(3,3),
         strides=(2,2),
@@ -95,7 +102,7 @@ class Tacotron():
       output_cell = OutputProjectionWrapper(decoder_cell, hp.num_mels * hp.outputs_per_step)
       decoder_init_state = output_cell.zero_state(batch_size=batch_size, dtype=tf.float32)
 
-      if is_training:
+      if is_training or is_teacher_force_generating:
         helper = TacoTrainingHelper(inputs, mel_targets, hp.num_mels, hp.outputs_per_step)
       else:
         helper = TacoTestHelper(batch_size, hp.num_mels, hp.outputs_per_step)
@@ -125,6 +132,7 @@ class Tacotron():
       self.alignments = alignments
       self.mel_targets = mel_targets
       self.linear_targets = linear_targets
+      self.reference_mel = reference_mel
       log('Initialized Tacotron model. Dimensions: ')
       log('  text embedding:          %d' % embedded_inputs.shape[-1])
       log('  style embedding:         %d' % style_embeddings.shape[-1])
