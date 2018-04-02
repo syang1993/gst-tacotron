@@ -13,9 +13,10 @@ class Synthesizer:
     print('Constructing model: %s' % model_name)
     inputs = tf.placeholder(tf.int32, [1, None], 'inputs')
     input_lengths = tf.placeholder(tf.int32, [1], 'input_lengths')
+    mel_targets = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'mel_targets')
     with tf.variable_scope('model') as scope:
       self.model = create_model(model_name, hparams)
-      self.model.initialize(inputs, input_lengths)
+      self.model.initialize(inputs, input_lengths, mel_targets=mel_targets)
       self.wav_output = audio.inv_spectrogram_tensorflow(self.model.linear_outputs[0])
 
     print('Loading checkpoint: %s' % checkpoint_path)
@@ -25,13 +26,21 @@ class Synthesizer:
     saver.restore(self.session, checkpoint_path)
 
 
-  def synthesize(self, text):
+  def synthesize(self, text, mel_targets=None):
     cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
     seq = text_to_sequence(text, cleaner_names)
-    feed_dict = {
-      self.model.inputs: [np.asarray(seq, dtype=np.int32)],
-      self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32)
-    }
+    if mel_targets is not None:
+      mel_targets = np.expand_dims(mel_targets, 0)
+      feed_dict = {
+        self.model.inputs: [np.asarray(seq, dtype=np.int32)],
+        self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32),
+        self.model.mel_targets: np.asarray(mel_targets, dtype=np.float32)
+      }
+    else:
+      feed_dict = {
+        self.model.inputs: [np.asarray(seq, dtype=np.int32)],
+        self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32)
+      }
     wav = self.session.run(self.wav_output, feed_dict=feed_dict)
     wav = audio.inv_preemphasis(wav)
     wav = wav[:audio.find_endpoint(wav)]

@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+import numpy as np
 from hparams import hparams, hparams_debug_string
 from synthesizer import Synthesizer
 
@@ -32,10 +33,23 @@ def run_eval(args):
   synth.load(args.checkpoint)
   base_path = get_output_base_path(args.checkpoint)
   for i, text in enumerate(sentences):
-    path = '%s-%d.wav' % (base_path, i)
-    print('Synthesizing: %s' % path)
-    with open(path, 'wb') as f:
-      f.write(synth.synthesize(text))
+    if args.text is not None:
+      path = '%s-eval.wav' % (base_path)
+      print('Synthesizing: %s' % path)
+      reference_mel = args.reference_mel
+      if reference_mel is not None:
+        reference_mel = np.load(args.reference_mel)
+      else:
+        print("TODO: add style weights when there is no reference mel")
+        raise
+      with open(path, 'wb') as f:
+        f.write(synth.synthesize(args.text, reference_mel))
+      break
+    else:
+      path = '%s-%d.wav' % (base_path, i)
+      print('Synthesizing: %s' % path)
+      with open(path, 'wb') as f:
+        f.write(synth.synthesize(text))
 
 
 def main():
@@ -43,6 +57,8 @@ def main():
   parser.add_argument('--checkpoint', required=True, help='Path to model checkpoint')
   parser.add_argument('--hparams', default='',
     help='Hyperparameter overrides as a comma-separated list of name=value pairs')
+  parser.add_argument('--text', default=None, help='Single test text sentence')
+  parser.add_argument('--reference_mel', default=None, help='Reference mel path')
   args = parser.parse_args()
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
   hparams.parse(args.hparams)
