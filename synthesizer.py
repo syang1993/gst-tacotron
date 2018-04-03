@@ -37,20 +37,16 @@ class Synthesizer:
   def synthesize(self, text, mel_targets=None, reference_mel=None):
     cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
     seq = text_to_sequence(text, cleaner_names)
+    feed_dict = {
+      self.model.inputs: [np.asarray(seq, dtype=np.int32)],
+      self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32),
+    }
     if mel_targets is not None:
       mel_targets = np.expand_dims(mel_targets, 0)
-      feed_dict = {
-        self.model.inputs: [np.asarray(seq, dtype=np.int32)],
-        self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32),
-        self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32),
-        self.model.mel_targets: np.asarray(mel_targets, dtype=np.float32)
-      }
-    else:
-      feed_dict = {
-        self.model.inputs: [np.asarray(seq, dtype=np.int32)],
-        self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32),
-        self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)
-      }
+      feed_dict.update({self.model.mel_targets: np.asarray(mel_targets, dtype=np.float32)})
+    if reference_mel is not None:
+      reference_mel = np.expand_dims(reference_mel, 0)
+      feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
     wav = self.session.run(self.wav_output, feed_dict=feed_dict)
     wav = audio.inv_preemphasis(wav)
     wav = wav[:audio.find_endpoint(wav)]
