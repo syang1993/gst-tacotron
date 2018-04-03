@@ -45,8 +45,8 @@ def run_eval(args):
       if reference_mel is not None:
         reference_mel = np.load(args.reference_mel)
       else:
-        print("TODO: add style weights when there is no reference mel")
-        raise
+        raise ValueError("TODO: add style weights when there is no reference mel")
+
       with open(path, 'wb') as f:
         f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel))
       break

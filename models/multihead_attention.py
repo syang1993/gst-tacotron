@@ -126,7 +126,7 @@ class MultiheadAttention():
     '''Combine all heads
 
        Returns:
-           a Tensor with shape [batch, length_x, shape_x[-1] * shape_x[-2]]
+           a Tensor with shape [batch, length_x, shape_x[-1] * shape_x[-3]]
     '''
     x = tf.transpose(x, [0, 2, 1, 3])
     x_shape = shape_list(x)

@@ -55,28 +55,33 @@ class Tacotron():
       
       if is_training:
         reference_mel = mel_targets
-      elif reference_mel is None:
-        print("TODO: add weight when there is no reference during inference")
-        raise
 
-      # Reference encoder
-      _, refnet_outputs = reference_encoder(
-        reference_mel, 
-        filters=[32, 32, 64, 64, 128, 128], 
-        kernel_size=(3,3),
-        strides=(2,2),
-        encoder_cell=GRUCell(128),
-        is_training=is_training)                                                  # [N, 128]
+      if reference_mel is not None:
+        # Reference encoder
+        _, refnet_outputs = reference_encoder(
+          reference_mel, 
+          filters=[32, 32, 64, 64, 128, 128], 
+          kernel_size=(3,3),
+          strides=(2,2),
+          encoder_cell=GRUCell(128),
+          is_training=is_training)                                                  # [N, 128]
 
-      # Style attention
-      style_attention = MultiheadAttention(
-        tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
-        tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
-        num_heads=hp.num_heads,
-        num_units=128,
-        attention_type="mlp_attention")
+        # Style attention
+        style_attention = MultiheadAttention(
+          tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
+          tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
+          num_heads=hp.num_heads,
+          num_units=128,
+          attention_type="mlp_attention")
 
-      style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+        style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+      else:
+        #raise ValueError("TODO: add weight when there is no reference during inference")
+        print("Use random weight for GST.")
+        random_weights = tf.random_uniform([1, hp.num_gst], maxval=1.0, dtype=tf.float32)
+        random_weights = tf.nn.softmax(random_weights, name="random_weights")
+        style_embeddings = tf.matmul(random_weights, gst_tokens)
+
 
       # Add style embedding to every text encoder state, applying tanh to
       # compress both encoder state and style embedding to the same scale.
