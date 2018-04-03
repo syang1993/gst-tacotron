@@ -29,7 +29,12 @@ def get_output_base_path(checkpoint_path):
 
 def run_eval(args):
   print(hparams_debug_string())
-  synth = Synthesizer()
+  is_teacher_force = False
+  mel_targets = args.mel_targets
+  if args.mel_targets is not None:
+    is_teacher_force = True
+    mel_targets = np.load(args.mel_targets)
+  synth = Synthesizer(teacher_forcing_generating=is_teacher_force)
   synth.load(args.checkpoint)
   base_path = get_output_base_path(args.checkpoint)
   for i, text in enumerate(sentences):
@@ -43,7 +48,7 @@ def run_eval(args):
         print("TODO: add style weights when there is no reference mel")
         raise
       with open(path, 'wb') as f:
-        f.write(synth.synthesize(args.text, reference_mel))
+        f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel))
       break
     else:
       path = '%s-%d.wav' % (base_path, i)
