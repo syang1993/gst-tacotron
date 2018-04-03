@@ -88,7 +88,7 @@ class MultiheadAttention():
     return context
 
   def _mlp_attention(self, qs, ks, vs):
-    '''MLP computation modified by https://github.com/npuichigo
+    '''MLP computation modified from https://github.com/npuichigo
 
     Returns:
         a context vector with shape [batch, num_heads, length_q, dim_vs]
@@ -102,16 +102,16 @@ class MultiheadAttention():
       # Scalar used in weight normalization
       g = tf.get_variable(
           "attention_g", dtype=dtype,
-          initializer=math.sqrt((1. / self.num_units)))
+          initializer=math.sqrt((1. / num_units)))
       # Bias added prior to the nonlinearity
       b = tf.get_variable(
-          "attention_b", [self.num_units], dtype=dtype,
+          "attention_b", [num_units], dtype=dtype,
           initializer=tf.zeros_initializer())
       # normed_v = g * v / ||v||
       normed_v = g * v * tf.rsqrt(
               tf.reduce_sum(tf.square(v)))
       # Single layer multilayer perceptron.
-      add = tf.reduce_sum(normed_v * tf.tanh(ks + qs), [-1], keep_dims=True)
+      add = tf.reduce_sum(normed_v * tf.tanh(ks + qs + b), [-1], keep_dims=True)
     else:
       # Single layer multilayer perceptron.
       add = tf.reduce_sum(v * tf.tanh(ks + qs), [-1], keep_dims=True)
