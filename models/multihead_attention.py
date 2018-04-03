@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import math
 from util.ops import shape_list
 
 class MultiheadAttention():
@@ -37,12 +38,12 @@ class MultiheadAttention():
 
     with tf.variable_scope("Multihead-attention"):
       q = tf.layers.conv1d(self.query, self.num_units, 1)
-      k =  tf.layers.conv1d(self.value, num_units, 1)
+      k =  tf.layers.conv1d(self.value, self.num_units, 1)
       v = self.value
       qs, ks, vs = self._split_heads(q, k, v)
-      if attention_type == 'mlp_attention':
-        style_embeddings = _mlp_attention(qs, ks, vs)
-      elif attention_type == 'dot_attention':
+      if self.attention_type == 'mlp_attention':
+        style_embeddings = self._mlp_attention(qs, ks, vs)
+      elif self.attention_type == 'dot_attention':
         style_embeddings = self._dot_product(qs, ks, vs)
       else:
         raise ValueError('Only mlp_attention and dot_attention are supported')
@@ -80,7 +81,7 @@ class MultiheadAttention():
     '''
     qk = tf.matmul(qs, ks, transpose_b=True)
     scale_factor = (self.num_units // self.num_heads)**-0.5
-    if normalize:
+    if self.normalize:
       qk *= scale_factor
     weights = tf.nn.softmax(qk, name="dot_attention_weights")
     context = tf.matmul(weights, vs)
@@ -96,24 +97,24 @@ class MultiheadAttention():
     dtype = qs.dtype
 
     v = tf.get_variable("attention_v", [num_units], dtype=dtype)
-    if normalize:
-    '''https://github.com/tensorflow/tensorflow/blob/r1.7/tensorflow/contrib/seq2seq/python/ops/attention_wrapper.py#L470'''
+    if self.normalize:
+      #https://github.com/tensorflow/tensorflow/blob/r1.7/tensorflow/contrib/seq2seq/python/ops/attention_wrapper.py#L470
       # Scalar used in weight normalization
-      g = variable_scope.get_variable(
+      g = tf.get_variable(
           "attention_g", dtype=dtype,
-          initializer=math.sqrt((1. / num_units)))
+          initializer=math.sqrt((1. / self.num_units)))
       # Bias added prior to the nonlinearity
-      b = variable_scope.get_variable(
-          "attention_b", [num_units], dtype=dtype,
-          initializer=init_ops.zeros_initializer())
+      b = tf.get_variable(
+          "attention_b", [self.num_units], dtype=dtype,
+          initializer=tf.zeros_initializer())
       # normed_v = g * v / ||v||
-      normed_v = g * v * math_ops.rsqrt(
-              math_ops.reduce_sum(math_ops.square(v)))
+      normed_v = g * v * tf.rsqrt(
+              tf.reduce_sum(tf.square(v)))
       # Single layer multilayer perceptron.
-      add = tf.reduce_sum(normed_v * tf.tanh(ks + qs), [-1], keepdims=True)
+      add = tf.reduce_sum(normed_v * tf.tanh(ks + qs), [-1], keep_dims=True)
     else:
       # Single layer multilayer perceptron.
-      add = tf.reduce_sum(v * tf.tanh(ks + qs), [-1], keepdims=True)
+      add = tf.reduce_sum(v * tf.tanh(ks + qs), [-1], keep_dims=True)
 
     # Compute attention weights.
     weights = tf.nn.softmax(add, name="mlp_attention_weights")

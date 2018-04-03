@@ -73,9 +73,8 @@ class Tacotron():
         tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
         tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
         num_heads=hp.num_heads,
-        linear_trans_for_value=False,
-        key_dim=128,
-        value_dim=256)
+        attention_type="mlp_attention")
+
       style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
       style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in 256]
 
