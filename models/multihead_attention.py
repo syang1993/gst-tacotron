@@ -3,34 +3,51 @@ import numpy as np
 from util.ops import shape_list
 
 class MultiheadAttention():
-  '''Multi-head attention implementation'''
+  '''Computes the multi-head attention as described in
+  https://arxiv.org/abs/1706.03762.
+  Args:
+    num_heads: The number of attention heads.
+    query: The sequence of queries. A tensor of shape :math:`[B, T_1, ...]`.
+    value: The sequence to attend. A tensor of shape :math:`[B, T_2, ...]`.
+      If ``None``, computes self-attention.
+    num_units: The number of hidden units. If not set, it is set to the input
+      dimension.
+    attention_type: a string, either "dot_attention", "mlp_attention".
+  Returns:
+     The concatenated attention context of each head.
+  '''
   def __init__(self,
                query,
                value,
                num_heads=4,
                attention_type='mlp_attention',
-               key_dim=128,
-               value_dim=256):
+               num_units=None,
+               normalize=True):
     self.query = query
     self.value = value
     self.num_heads = num_heads
-    self.key_dim = key_dim
-    self.value_dim = value_dim
-    self.scale_factor = (key_dim // num_heads)**-0.5
+    self.attention_type = attention_type
+    self.num_units = num_units or query.get_shape().as_list()[-1]
+    self.normalize = normalize
 
   def multi_head_attention(self):
-    with tf.variable_scope("Multihead-attention"):
-      q, k, v = self._linear_trans(self.query, self.value)
-      qs, ks, vs = self._split_heads(q, k, v)
-      style_embeddings = self._dot_product(qs, ks, vs)
-      return self._combine_heads(style_embeddings)
+    if self.num_units % self.num_heads != 0:
+      raise ValueError("Multi head attention requires that num_units is a"
+                       " multiple of {}".format(num_heads))
 
-  def _linear_trans(self, q, v):
-    q = tf.layers.dense(q, self.key_dim, use_bias=False, name="q")
-    k = tf.layers.dense(v, self.key_dim, use_bias=False, name="k")
-    if self.linear_trans_for_value:
-      v = tf.layers.dense(v, self.value_dim, use_bias=False, name="v")
-    return q, k, v
+    with tf.variable_scope("Multihead-attention"):
+      q = tf.layers.conv1d(self.query, self.num_units, 1)
+      k =  tf.layers.conv1d(self.value, num_units, 1)
+      v = self.value
+      qs, ks, vs = self._split_heads(q, k, v)
+      if attention_type == 'mlp_attention':
+        style_embeddings = _mlp_attention(qs, ks, vs)
+      elif attention_type == 'dot_attention':
+        style_embeddings = self._dot_product(qs, ks, vs)
+      else:
+        raise ValueError('Only mlp_attention and dot_attention are supported')
+
+      return self._combine_heads(style_embeddings)
 
   def _split_heads(self, q, k, v):
     '''Split the channels into multiple heads
@@ -40,11 +57,8 @@ class MultiheadAttention():
     '''
     qs = tf.transpose(self._split_last_dimension(q, self.num_heads), [0, 2, 1, 3])
     ks = tf.transpose(self._split_last_dimension(k, self.num_heads), [0, 2, 1, 3])
-    if self.linear_trans_for_value:
-      vs = tf.transpose(self._split_last_dimension(v, self.num_heads), [0, 2, 1, 3])
-    else:
-      v_shape = shape_list(v)  
-      vs = tf.tile(tf.expand_dims(v, axis=1), [1, self.num_heads, 1, 1])
+    v_shape = shape_list(v)  
+    vs = tf.tile(tf.expand_dims(v, axis=1), [1, self.num_heads, 1, 1])
     return qs, ks, vs
 
   def _split_last_dimension(self, x, num_heads):
@@ -58,34 +72,54 @@ class MultiheadAttention():
     assert dim % num_heads == 0 
     return tf.reshape(x, x_shape[:-1] + [num_heads, dim // num_heads])
 
-  def _dot_product(self, q, k, v):
+  def _dot_product(self, qs, ks, vs):
     '''dot-product computation
 
     Returns:
-        a context vector with shape [batch, num_heads, length_q, dim_v]
+        a context vector with shape [batch, num_heads, length_q, dim_vs]
     '''
-    qk = tf.matmul(q, k, transpose_b=True)
-    qk *= self.scale_factor
+    qk = tf.matmul(qs, ks, transpose_b=True)
+    scale_factor = (self.num_units // self.num_heads)**-0.5
+    if normalize:
+      qk *= scale_factor
     weights = tf.nn.softmax(qk, name="dot_attention_weights")
-    context = tf.matmul(weights, v)
+    context = tf.matmul(weights, vs)
     return context
 
-  def _mlp_attention(self, q, k, v):
+  def _mlp_attention(self, qs, ks, vs):
     '''MLP computation modified by https://github.com/npuichigo
 
     Returns:
-        a context vector with shape [batch, num_heads, length_q, dim_v]
+        a context vector with shape [batch, num_heads, length_q, dim_vs]
     '''
-    num_units = q.get_shape()[-1].value
-    dtype = q.dtype
+    num_units = qs.get_shape()[-1].value
+    dtype = qs.dtype
 
     v = tf.get_variable("attention_v", [num_units], dtype=dtype)
-    # Single layer multilayer perceptron.
-    add = tf.reduce_sum(v * tf.tanh(k + q), [-1], keepdims=True)
+    if normalize:
+    '''https://github.com/tensorflow/tensorflow/blob/r1.7/tensorflow/contrib/seq2seq/python/ops/attention_wrapper.py#L470'''
+      # Scalar used in weight normalization
+      g = variable_scope.get_variable(
+          "attention_g", dtype=dtype,
+          initializer=math.sqrt((1. / num_units)))
+      # Bias added prior to the nonlinearity
+      b = variable_scope.get_variable(
+          "attention_b", [num_units], dtype=dtype,
+          initializer=init_ops.zeros_initializer())
+      # normed_v = g * v / ||v||
+      normed_v = g * v * math_ops.rsqrt(
+              math_ops.reduce_sum(math_ops.square(v)))
+      # Single layer multilayer perceptron.
+      add = tf.reduce_sum(normed_v * tf.tanh(ks + qs), [-1], keepdims=True)
+    else:
+      # Single layer multilayer perceptron.
+      add = tf.reduce_sum(v * tf.tanh(ks + qs), [-1], keepdims=True)
+
     # Compute attention weights.
     weights = tf.nn.softmax(add, name="mlp_attention_weights")
     # Compute attention context.
-    context = tf.matmul(attn, values, transpose_a=True
+    context = tf.matmul(weights, vs, transpose_a=True)
+    return context
 
   def _combine_heads(self, x):
     '''Combine all heads
