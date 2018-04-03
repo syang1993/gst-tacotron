@@ -8,15 +8,12 @@ class MultiheadAttention():
                query,
                value,
                num_heads=4,
-               # I'm not sure whether the authors used the original multi-head attention,
-               # the below hparam is True when we want to use original multi-head attention
-               linear_trans_for_value=True, 
+               attention_type='mlp_attention',
                key_dim=128,
                value_dim=256):
     self.query = query
     self.value = value
     self.num_heads = num_heads
-    self.linear_trans_for_value = linear_trans_for_value
     self.key_dim = key_dim
     self.value_dim = value_dim
     self.scale_factor = (key_dim // num_heads)**-0.5
@@ -26,14 +23,7 @@ class MultiheadAttention():
       q, k, v = self._linear_trans(self.query, self.value)
       qs, ks, vs = self._split_heads(q, k, v)
       style_embeddings = self._dot_product(qs, ks, vs)
-      if self.linear_trans_for_value:
-        return tf.layers.dense(
-          self._combine_heads(style_embeddings), 
-          self.value_dim, 
-          use_bias=False, 
-          name="style_embedding")
-      else:
-        return self._combine_heads(style_embeddings)
+      return self._combine_heads(style_embeddings)
 
   def _linear_trans(self, q, v):
     q = tf.layers.dense(q, self.key_dim, use_bias=False, name="q")
@@ -72,12 +62,30 @@ class MultiheadAttention():
     '''dot-product computation
 
     Returns:
-        a Tensor with shape [batch, num_heads, length_q, dim_v]
+        a context vector with shape [batch, num_heads, length_q, dim_v]
     '''
     qk = tf.matmul(q, k, transpose_b=True)
     qk *= self.scale_factor
-    weights = tf.nn.softmax(qk, name="multihead_attention_weights")
-    return tf.matmul(weights, v)
+    weights = tf.nn.softmax(qk, name="dot_attention_weights")
+    context = tf.matmul(weights, v)
+    return context
+
+  def _mlp_attention(self, q, k, v):
+    '''MLP computation modified by https://github.com/npuichigo
+
+    Returns:
+        a context vector with shape [batch, num_heads, length_q, dim_v]
+    '''
+    num_units = q.get_shape()[-1].value
+    dtype = q.dtype
+
+    v = tf.get_variable("attention_v", [num_units], dtype=dtype)
+    # Single layer multilayer perceptron.
+    add = tf.reduce_sum(v * tf.tanh(k + q), [-1], keepdims=True)
+    # Compute attention weights.
+    weights = tf.nn.softmax(add, name="mlp_attention_weights")
+    # Compute attention context.
+    context = tf.matmul(attn, values, transpose_a=True
 
   def _combine_heads(self, x):
     '''Combine all heads

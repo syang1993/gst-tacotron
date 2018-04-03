@@ -17,7 +17,7 @@ def reference_encoder(inputs, filters, kernel_size, strides, encoder_cell, is_tr
     ref_outputs = tf.expand_dims(inputs,axis=-1)
     # CNN stack
     for i, channel in enumerate(filters):
-      ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, is_training, 'conv2d_%d' % i)
+      ref_outputs = conv2d(ref_outputs, channel, kernel_size, strides, tf.nn.relu, is_training, 'conv2d_%d' % i)
 
     shapes = shape_list(ref_outputs)
     ref_outputs = tf.reshape(
@@ -120,15 +120,16 @@ def conv1d(inputs, kernel_size, channels, activation, is_training, scope):
       padding='same')
     return tf.layers.batch_normalization(conv1d_output, training=is_training)
 
-def conv2d(inputs, filters, kernel_size, strides, is_training, scope):
+def conv2d(inputs, filters, kernel_size, strides, activation, is_training, scope):
   with tf.variable_scope(scope):
     conv2d_output = tf.layers.conv2d(
       inputs,
       filters=filters,
       kernel_size=kernel_size,
       strides=strides,
-      padding='same',
-      activation=None)
+      padding='same')
     conv2d_output = tf.layers.batch_normalization(conv2d_output, training=is_training)
-    return tf.nn.relu(conv2d_output)
+    if activation is not None:
+      conv2d_output = activation(conv2d_output)
+    return conv2d_output
 

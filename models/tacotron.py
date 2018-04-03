@@ -79,7 +79,10 @@ class Tacotron():
       style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
       style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in 256]
 
-      encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
+      # Add style embedding to every text encoder state, applying tanh to
+      # compress both encoder state and style embedding to the same scale.
+      #encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
+      encoder_outputs += tf.nn.tanh(style_embeddings)
 
       # Attention
       attention_cell = AttentionWrapper(
