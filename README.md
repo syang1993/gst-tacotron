@@ -9,6 +9,7 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 - [ ] Usage for this repo.
 - [ ] Multi-speaker model
 
+## Notes:
 There are some important changes to this repo, we will push these changes to github after we get experimental results.
 
 ## Reference
