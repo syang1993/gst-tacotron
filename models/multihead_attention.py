@@ -117,9 +117,9 @@ class MultiheadAttention():
       add = tf.reduce_sum(v * tf.tanh(ks + qs), [-1], keep_dims=True)
 
     # Compute attention weights.
-    weights = tf.nn.softmax(add, name="mlp_attention_weights")
+    weights = tf.nn.softmax(tf.transpose(add, [0, 1, 3, 2]), name="mlp_attention_weights")
     # Compute attention context.
-    context = tf.matmul(weights, vs, transpose_a=True)
+    context = tf.matmul(weights, vs)
     return context
 
   def _combine_heads(self, x):

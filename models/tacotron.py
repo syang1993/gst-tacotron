@@ -44,10 +44,12 @@ class Tacotron():
         initializer=tf.truncated_normal_initializer(stddev=0.5))
       embedded_inputs = tf.nn.embedding_lookup(embedding_table, inputs)           # [N, T_in, 256]
       
-      #Global style tokens (GST)
-      gst_tokens = tf.get_variable(
-        'style_tokens', [hp.num_gst, 256 // hp.num_heads], dtype=tf.float32,
-        initializer=tf.truncated_normal_initializer(stddev=0.5))
+      if hp.use_gst:
+        #Global style tokens (GST)
+        gst_tokens = tf.get_variable(
+          'style_tokens', [hp.num_gst, 256 // hp.num_heads], dtype=tf.float32,
+          initializer=tf.truncated_normal_initializer(stddev=0.5))
+        self.gst_tokens = gst_tokens
  
       # Encoder
       prenet_outputs = prenet(embedded_inputs, is_training)                       # [N, T_in, 128]
@@ -66,27 +68,34 @@ class Tacotron():
           encoder_cell=GRUCell(128),
           is_training=is_training)                                                  # [N, 128]
 
-        # Style attention
-        style_attention = MultiheadAttention(
-          tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
-          tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
-          num_heads=hp.num_heads,
-          num_units=128,
-          attention_type="mlp_attention")
+        self.refnet_outputs = refnet_outputs
+        if hp.use_gst:
+          # Style attention
+          style_attention = MultiheadAttention(
+            tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
+            tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
+            num_heads=hp.num_heads,
+            num_units=128,
+            attention_type=hp.style_att_type)
 
-        style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+          style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+        else:
+          style_embeddings = refnet_outputs                                           # [N, 128]
       else:
         #raise ValueError("TODO: add weight when there is no reference during inference")
         print("Use random weight for GST.")
-        random_weights = tf.random_uniform([1, hp.num_gst], maxval=1.0, dtype=tf.float32)
+        random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
         random_weights = tf.nn.softmax(random_weights, name="random_weights")
         style_embeddings = tf.matmul(random_weights, gst_tokens)
-
+        style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
 
       # Add style embedding to every text encoder state, applying tanh to
       # compress both encoder state and style embedding to the same scale.
-      # encoder_outputs = tf.concat([encoder_outputs, tf.nn.tanh(style_embeddings)], axis=-1)
-      encoder_outputs += tf.nn.tanh(style_embeddings)
+      if hp.use_gst:
+        encoder_outputs += tf.nn.tanh(style_embeddings)
+      else:
+        style_embeddings = tf.tile(tf.expand_dims(style_embeddings, axis=1), [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
+        encoder_outputs = tf.concat([encoder_outputs, tf.nn.tanh(style_embeddings)], axis=-1)
 
       # Attention
       attention_cell = AttentionWrapper(
@@ -132,8 +141,6 @@ class Tacotron():
       self.input_lengths = input_lengths
       self.mel_outputs = mel_outputs
       self.encoder_outputs = encoder_outputs
-      self.refnet_outputs = refnet_outputs
-      self.gst_tokens = gst_tokens
       self.style_embeddings = style_embeddings
       self.linear_outputs = linear_outputs
       self.alignments = alignments

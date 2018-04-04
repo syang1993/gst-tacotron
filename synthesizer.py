@@ -11,11 +11,12 @@ from util import audio
 class Synthesizer:
   def __init__(self, teacher_forcing_generating=False):
     self.teacher_forcing_generating = teacher_forcing_generating
-  def load(self, checkpoint_path, model_name='tacotron'):
+  def load(self, checkpoint_path, reference_mel=None, model_name='tacotron'):
     print('Constructing model: %s' % model_name)
     inputs = tf.placeholder(tf.int32, [1, None], 'inputs')
     input_lengths = tf.placeholder(tf.int32, [1], 'input_lengths') 
-    reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
+    if reference_mel is not None:
+      reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
     # Only used in teacher-forcing generating mode
     if self.teacher_forcing_generating:
       mel_targets = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'mel_targets')
@@ -47,7 +48,8 @@ class Synthesizer:
     if reference_mel is not None:
       reference_mel = np.expand_dims(reference_mel, 0)
       feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
-    wav = self.session.run(self.wav_output, feed_dict=feed_dict)
+    wav, style_embeddings, gst_tokens = self.session.run([self.wav_output, self.model.style_embeddings, self.model.gst_tokens], feed_dict=feed_dict)
+    print(self.session.run(tf.tanh(style_embeddings)))
     wav = audio.inv_preemphasis(wav)
     wav = wav[:audio.find_endpoint(wav)]
     out = io.BytesIO()

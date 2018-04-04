@@ -35,7 +35,7 @@ def run_eval(args):
     is_teacher_force = True
     mel_targets = np.load(args.mel_targets)
   synth = Synthesizer(teacher_forcing_generating=is_teacher_force)
-  synth.load(args.checkpoint)
+  synth.load(args.checkpoint, args.reference_mel)
   base_path = get_output_base_path(args.checkpoint)
   for i, text in enumerate(sentences):
     if args.text is not None:
@@ -45,7 +45,8 @@ def run_eval(args):
       if reference_mel is not None:
         reference_mel = np.load(args.reference_mel)
       else:
-        raise ValueError("TODO: add style weights when there is no reference mel")
+        #raise ValueError("TODO: add style weights when there is no reference mel")
+        reference_mel=None
 
       with open(path, 'wb') as f:
         f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel))
