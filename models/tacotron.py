@@ -92,6 +92,7 @@ class Tacotron():
       # Add style embedding to every text encoder state, applying tanh to
       # compress both encoder state and style embedding to the same scale.
       if hp.use_gst:
+        # Concat or Add?
         encoder_outputs += tf.nn.tanh(style_embeddings)
       else:
         style_embeddings = tf.tile(tf.expand_dims(style_embeddings, axis=1), [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
