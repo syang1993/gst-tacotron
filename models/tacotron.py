@@ -67,8 +67,8 @@ class Tacotron():
           strides=(2,2),
           encoder_cell=GRUCell(128),
           is_training=is_training)                                                  # [N, 128]
-
         self.refnet_outputs = refnet_outputs
+
         if hp.use_gst:
           # Style attention
           style_attention = MultiheadAttention(
