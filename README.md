@@ -6,8 +6,9 @@ An tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, 
 - [x] Update the attention mechanism for global style attention paper [Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis](https://arxiv.org/abs/1803.09017)
 - [ ] Add GMM-attention for the paper [Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron](https://arxiv.org/abs/1803.09047).
 - [ ] Evaluation process and demos
+- [ ] Usage for this repo.
 
-There are some important changes to this rep, we will push these changes to github after we get experimental results.
+There are some important changes to this repo, we will push these changes to github after we get experimental results.
 
 ## Reference
   -  Keithito's implementation of tacotron: https://github.com/keithito/tacotron
