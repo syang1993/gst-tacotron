@@ -35,7 +35,7 @@ def write_metadata(metadata, out_dir):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--base_dir', default=os.path.expanduser('/home/yangshan/tts_workspace/gst-tacotron'))
+  parser.add_argument('--base_dir', default=os.getcwd())
   parser.add_argument('--output', default='training')
   parser.add_argument('--dataset', required=True, choices=['blizzard', 'ljspeech'])
   parser.add_argument('--num_workers', type=int, default=cpu_count())
