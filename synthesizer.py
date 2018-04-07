@@ -48,8 +48,8 @@ class Synthesizer:
     if reference_mel is not None:
       reference_mel = np.expand_dims(reference_mel, 0)
       feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
-    wav, style_embeddings, gst_tokens = self.session.run([self.wav_output, self.model.style_embeddings, self.model.gst_tokens], feed_dict=feed_dict)
-    print(self.session.run(tf.tanh(style_embeddings)))
+    wav, style_embeddings = self.session.run([self.wav_output, self.model.style_embeddings], feed_dict=feed_dict)
+    #print(self.session.run(tf.tanh(style_embeddings)))
     wav = audio.inv_preemphasis(wav)
     wav = wav[:audio.find_endpoint(wav)]
     out = io.BytesIO()

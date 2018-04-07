@@ -35,7 +35,7 @@ hparams = tf.contrib.training.HParams(
   power=1.5,              # Power to raise magnitudes to prior to Griffin-Lim
 
   #Global style token
-  use_gst=False,     # When false, the scripit will do as the paper  "Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron"
+  use_gst=True,     # When false, the scripit will do as the paper  "Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron"
   num_gst=10,
   num_heads=4,       # Head number for multi-head attention
   style_att_type="mlp_attention", # Attention type for style attention module (dot_attention, mlp_attention)
