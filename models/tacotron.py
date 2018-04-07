@@ -60,14 +60,14 @@ class Tacotron():
 
       if reference_mel is not None:
         # Reference encoder
-        _, refnet_outputs = reference_encoder(
+        refnet_outputs = reference_encoder(
           reference_mel, 
           filters=[32, 32, 64, 64, 128, 128], 
           kernel_size=(3,3),
           strides=(2,2),
           encoder_cell=GRUCell(128),
-          is_training=is_training)                                                  # [N, 128]
-        self.refnet_outputs = refnet_outputs
+          is_training=is_training)                                                 # [N, 128]
+        self.refnet_outputs = refnet_outputs                                       
 
         if hp.use_gst:
           # Style attention
@@ -78,9 +78,10 @@ class Tacotron():
             num_units=128,
             attention_type=hp.style_att_type)
 
-          style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
+          # Apply tanh to compress both encoder state and style embedding to the same scale.
+          style_embeddings = tf.nn.tanh(style_attention.multi_head_attention())                   # [N, 1, 256]
         else:
-          style_embeddings = refnet_outputs                                           # [N, 128]
+          style_embeddings = tf.expand_dims(refnet_outputs, axis=1)                   # [N, 1, 128]
       else:
         #raise ValueError("TODO: add weight when there is no reference during inference")
         print("Use random weight for GST.")
@@ -89,14 +90,9 @@ class Tacotron():
         style_embeddings = tf.matmul(random_weights, gst_tokens)
         style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
 
-      # Add style embedding to every text encoder state, applying tanh to
-      # compress both encoder state and style embedding to the same scale.
-      if hp.use_gst:
-        # Concat or Add?
-        encoder_outputs += tf.nn.tanh(style_embeddings)
-      else:
-        style_embeddings = tf.tile(tf.expand_dims(style_embeddings, axis=1), [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
-        encoder_outputs = tf.concat([encoder_outputs, tf.nn.tanh(style_embeddings)], axis=-1)
+      # Add style embedding to every text encoder state
+      style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
+      encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
 
       # Attention
       attention_cell = AttentionWrapper(

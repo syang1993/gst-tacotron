@@ -8,7 +8,7 @@ def prenet(inputs, is_training, layer_sizes=[256, 128], scope=None):
   drop_rate = 0.5 if is_training else 0.0
   with tf.variable_scope(scope or 'prenet'):
     for i, size in enumerate(layer_sizes):
-      dense = tf.layers.dense(x, units=size, name='dense_%d' % (i+1))
+      dense = tf.layers.dense(x, units=size, activation=tf.nn.relu, name='dense_%d' % (i+1))
       x = tf.layers.dropout(dense, rate=drop_rate, name='dropout_%d' % (i+1))
   return x
 
@@ -29,7 +29,8 @@ def reference_encoder(inputs, filters, kernel_size, strides, encoder_cell, is_tr
       ref_outputs,
       dtype=tf.float32)
 
-    return tf.tanh(encoder_outputs), encoder_state
+    reference_state = tf.layers.dense(encoder_outputs[:,-1,:], 128, activation=tf.nn.tanh) # [N, 128]
+    return reference_state
 
 
 def encoder_cbhg(inputs, input_lengths, is_training):

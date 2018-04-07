@@ -1,4 +1,4 @@
-# GST Tacotron
+# GST Tacotron (exprissive end-to-end speech syntheis using global style token)
 
 A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis](https://arxiv.org/abs/1803.09017) and [Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron](https://arxiv.org/abs/1803.09047).
 

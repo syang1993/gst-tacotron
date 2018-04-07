@@ -29,7 +29,7 @@ def run_eval(args):
   if reference_mel is not None:
     reference_mel = np.load(args.reference_mel)
   else:
-    if hp.use_gst:
+    if hparams.use_gst:
       #raise ValueError("TODO: add style weights when there is no reference mel. Now we use random weights.")
       reference_mel=None
     else:
