@@ -55,8 +55,8 @@ class DataFeeder(threading.Thread):
     if hparams.use_cmudict:
       cmudict_path = os.path.join(self._datadir, 'cmudict-0.7b')
       if not os.path.isfile(cmudict_path):
-        raise Exception('If use_cmudict=True, you must download ' +
-          'http://svn.code.sf.net/p/cmusphinx/code/trunk/cmudict/cmudict-0.7b to %s'  % cmudict_path)
+        raise Exception('If use_cmudict=True, you must download cmu dictionary first. ' +
+          'Run shell as:\n wget -P %s http://svn.code.sf.net/p/cmusphinx/code/trunk/cmudict/cmudict-0.7b'  % self._datadir)
       self._cmudict = cmudict.CMUDict(cmudict_path, keep_ambiguous=False)
       log('Loaded CMUDict with %d unambiguous entries' % len(self._cmudict))
     else:

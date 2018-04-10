@@ -4,6 +4,7 @@ import re
 import numpy as np
 from hparams import hparams, hparams_debug_string
 from synthesizer import Synthesizer
+from util import audio
 
 def get_output_base_path(checkpoint_path):
   base_dir = os.path.dirname(checkpoint_path)
@@ -16,26 +17,31 @@ def run_eval(args):
   print(hparams_debug_string())
   is_teacher_force = False
   mel_targets = args.mel_targets
+  reference_mel = None
   if args.mel_targets is not None:
     is_teacher_force = True
     mel_targets = np.load(args.mel_targets)
   synth = Synthesizer(teacher_forcing_generating=is_teacher_force)
-  synth.load(args.checkpoint, args.reference_mel)
+  synth.load(args.checkpoint, args.reference_audio)
   base_path = get_output_base_path(args.checkpoint)
 
-  path = '%s-eval.wav' % (base_path)
-  print('Synthesizing: %s' % path)
-  reference_mel = args.reference_mel
-  if reference_mel is not None:
-    reference_mel = np.load(args.reference_mel)
+  if args.reference_audio is not None:
+    ref_wav = audio.load_wav(args.reference_audio)
+    reference_mel = audio.melspectrogram(ref_wav).astype(np.float32).T
+    path = '%s_ref-%s.wav' % (base_path, os.path.splitext(os.path.basename(args.reference_audio))[0])
   else:
     if hparams.use_gst:
-      #raise ValueError("TODO: add style weights when there is no reference mel. Now we use random weights.")
-      reference_mel=None
+      print("*******************************")
+      print("TODO: add style weights when there is no reference audio. Now we use random weights, " + 
+             "which may generate unintelligible audio sometimes.")
+      print("*******************************")
+      path = '%s_ref-randomWeight.wav' % (base_path)
     else:
       raise ValueError("You must set the reference audio if you don't want to use GSTs.")
 
   with open(path, 'wb') as f:
+    print('Synthesizing: %s' % args.text)
+    print('Output wav file: %s' % path)
     f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel))
 
 
@@ -45,7 +51,7 @@ def main():
   parser.add_argument('--text', required=True, default=None, help='Single test text sentence')
   parser.add_argument('--hparams', default='',
     help='Hyperparameter overrides as a comma-separated list of name=value pairs')
-  parser.add_argument('--reference_mel', default=None, help='Reference mel path')
+  parser.add_argument('--reference_audio', default=None, help='Reference audio path')
   parser.add_argument('--mel_targets', default=None, help='Mel-targets path, used when use teacher_force generation')
   args = parser.parse_args()
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

@@ -97,7 +97,7 @@ class Tacotron():
       # Attention
       attention_cell = AttentionWrapper(
         DecoderPrenetWrapper(GRUCell(256), is_training),
-        BahdanauAttention(256, encoder_outputs),
+        BahdanauAttention(256, encoder_outputs, memory_sequence_length=input_lengths),
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, 256]
 
@@ -163,10 +163,7 @@ class Tacotron():
     with tf.variable_scope('loss') as scope:
       hp = self._hparams
       self.mel_loss = tf.reduce_mean(tf.abs(self.mel_targets - self.mel_outputs))
-      l1 = tf.abs(self.linear_targets - self.linear_outputs)
-      # Prioritize loss for frequencies under 3000 Hz.
-      n_priority_freq = int(3000 / (hp.sample_rate * 0.5) * hp.num_freq)
-      self.linear_loss = 0.5 * tf.reduce_mean(l1) + 0.5 * tf.reduce_mean(l1[:,:,0:n_priority_freq])
+      self.linear_loss = tf.reduce_mean(tf.abs(self.linear_targets - self.linear_outputs))
       self.loss = self.mel_loss + self.linear_loss
 
 
