@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import re
 import random
 import tensorflow as tf
 import threading
@@ -10,7 +11,7 @@ from util.infolog import log
 
 
 _batches_per_group = 32
-_p_cmudict = 0.5
+_p_cmudict = 1
 _pad = 0
 
 
@@ -104,7 +105,8 @@ class DataFeeder(threading.Thread):
     meta = self._metadata[self._offset]
     self._offset += 1
 
-    text = meta[3]
+    _punctuation_re = re.compile(r'([\.,"\-_:]+)')
+    text =  re.sub(_punctuation_re, r' \1 ', meta[3])
     if self._cmudict and random.random() < _p_cmudict:
       text = ' '.join([self._maybe_get_arpabet(word) for word in text.split(' ')])
 
@@ -116,7 +118,7 @@ class DataFeeder(threading.Thread):
 
   def _maybe_get_arpabet(self, word):
     arpabet = self._cmudict.lookup(word)
-    return '{%s}' % arpabet[0] if arpabet is not None and random.random() < 0.5 else word
+    return '{%s}' % arpabet[0] if arpabet is not None and random.random() < 1 else word
 
 
 def _prepare_batch(batch, outputs_per_step):
