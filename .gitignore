@@ -6,6 +6,6 @@ database
 run*.sh
 training*/
 logs*
-data*
+database
 *.zip
 
