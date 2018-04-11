@@ -101,8 +101,8 @@ class Tacotron():
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, 256]
 
-      # Concatenate attention context vector and RNN cell output into a 512D vector.
-      concat_cell = ConcatOutputAndAttentionWrapper(attention_cell)              # [N, T_in, 512]
+      # Concatenate attention context vector and RNN cell output.
+      concat_cell = ConcatOutputAndAttentionWrapper(attention_cell)              
 
       # Decoder (layers specified bottom to top):
       decoder_cell = MultiRNNCell([
