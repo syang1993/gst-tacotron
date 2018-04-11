@@ -22,7 +22,7 @@ hparams = tf.contrib.training.HParams(
   outputs_per_step=5,
 
   # Training:
-  batch_size=16,
+  batch_size=32,
   adam_beta1=0.9,
   adam_beta2=0.999,
   initial_learning_rate=0.002,

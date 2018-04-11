@@ -11,7 +11,7 @@ from util.infolog import log
 
 
 _batches_per_group = 32
-_p_cmudict = 1
+_p_cmudict = 0.5
 _pad = 0
 
 
@@ -118,7 +118,7 @@ class DataFeeder(threading.Thread):
 
   def _maybe_get_arpabet(self, word):
     arpabet = self._cmudict.lookup(word)
-    return '{%s}' % arpabet[0] if arpabet is not None and random.random() < 1 else word
+    return '{%s}' % arpabet[0] if arpabet is not None and random.random() < 0.5 else word
 
 
 def _prepare_batch(batch, outputs_per_step):
