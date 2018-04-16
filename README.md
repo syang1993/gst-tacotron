@@ -6,10 +6,10 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 ### Audio Samples
 
   * **[Audio Samples](https:///syang1993.github.io/gst-tacotron/)** from models trained using this repo.
-    * This set was trained for 100K steps on the [Blizzard 2013 dataset](https://www.synsig.org/index.php/Blizzard_Challenge_2013)
+    * This set was trained using the [Blizzard 2013 dataset](https://www.synsig.org/index.php/Blizzard_Challenge_2013) with and without global style tokens (GSTs).
       * I found the synthesized audio can learn the prosody of the reference audio.
-      * The audio quality isn't so good. Maybe more data and more training steps will improve it.
-    * More samples and analysis will come soon.
+      * The audio quality isn't so good as the paper. Maybe more data, more training steps and the wavenet vocoder will improve the quality.
+      
 
 ## Quick Start:
 
@@ -20,9 +20,9 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 2. Install the latest version of [TensorFlow](https://www.tensorflow.org/install/) for your platform. For better performance, install with GPU support if it's available. This code works with TensorFlow 1.4.
 
 3. Install requirements:
-   '''
+   ```
    pip install -r requirements.txt
-   '''
+   ```
 
 ### Training
 
