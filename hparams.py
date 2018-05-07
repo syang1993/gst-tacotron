@@ -22,12 +22,12 @@ hparams = tf.contrib.training.HParams(
   outputs_per_step=5,
 
   # Training:
-  batch_size=32,
+  batch_size=16,
   adam_beta1=0.9,
   adam_beta2=0.999,
   initial_learning_rate=0.002,
   decay_learning_rate=True,
-  use_cmudict=True,  # Use CMUDict during training to learn pronunciation of ARPAbet phonemes
+  use_cmudict=False,  # Use CMUDict during training to learn pronunciation of ARPAbet phonemes
 
   # Eval:
   max_iters=600,
@@ -35,10 +35,14 @@ hparams = tf.contrib.training.HParams(
   power=1.5,              # Power to raise magnitudes to prior to Griffin-Lim
 
   #Global style token
-  use_gst=True,     # When false, the scripit will do as the paper  "Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron"
+  use_gst=False,     # When false, the scripit will do as the paper  "Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron"
   num_gst=10,
   num_heads=4,       # Head number for multi-head attention
   style_att_type="mlp_attention", # Attention type for style attention module (dot_attention, mlp_attention)
+
+  # GMM attention
+  gmm_attention=True,
+  num_attn_mixture=10, # Number of mixtures for GMM-attention
 )
 
 

@@ -8,6 +8,7 @@ from .helpers import TacoTestHelper, TacoTrainingHelper
 from .modules import encoder_cbhg, post_cbhg, prenet, reference_encoder
 from .rnn_wrappers import DecoderPrenetWrapper, ConcatOutputAndAttentionWrapper, ZoneoutWrapper
 from .multihead_attention import MultiheadAttention
+from .gmm_attention import GMMAttention
 
 
 class Tacotron():
@@ -72,14 +73,14 @@ class Tacotron():
         if hp.use_gst:
           # Style attention
           style_attention = MultiheadAttention(
-            tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
+            tf.tanh(tf.expand_dims(refnet_outputs, axis=1)),                                   # [N, 1, 128]
             tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
             num_heads=hp.num_heads,
             num_units=128,
             attention_type=hp.style_att_type)
 
           # Apply tanh to compress both encoder state and style embedding to the same scale.
-          style_embeddings = tf.nn.tanh(style_attention.multi_head_attention())                   # [N, 1, 256]
+          style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
         else:
           style_embeddings = tf.expand_dims(refnet_outputs, axis=1)                   # [N, 1, 128]
       else:
@@ -87,7 +88,7 @@ class Tacotron():
         print("Use random weight for GST.")
         random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
         random_weights = tf.nn.softmax(random_weights, name="random_weights")
-        style_embeddings = tf.nn.tanh(tf.matmul(random_weights, gst_tokens))
+        style_embeddings = tf.matmul(random_weights, tf.nn.tanh(gst_tokens))
         style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
 
       # Add style embedding to every text encoder state
@@ -95,9 +96,19 @@ class Tacotron():
       encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
 
       # Attention
+      if hp.gmm_attention:
+        attention_mechanism = GMMAttention(
+          num_units=256,
+          num_attn_mixture=hp.num_attn_mixture, 
+          memory=encoder_outputs, 
+          memory_sequence_length=input_lengths)
+      else:
+        attention_mechanism = BahdanauAttention(
+          256, encoder_outputs, memory_sequence_length=input_lengths)
+
       attention_cell = AttentionWrapper(
         DecoderPrenetWrapper(GRUCell(256), is_training),
-        BahdanauAttention(256, encoder_outputs, memory_sequence_length=input_lengths),
+        attention_mechanism,
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, 256]
 
