@@ -83,7 +83,6 @@ class Tacotron():
         else:
           style_embeddings = tf.expand_dims(refnet_outputs, axis=1)                   # [N, 1, 128]
       else:
-        #raise ValueError("TODO: add weight when there is no reference during inference")
         print("Use random weight for GST.")
         random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
         random_weights = tf.nn.softmax(random_weights, name="random_weights")
@@ -95,9 +94,6 @@ class Tacotron():
       encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
 
       # Attention
-      attention_mechanism = BahdanauAttention(
-        256, encoder_outputs, memory_sequence_length=input_lengths)
-
       attention_cell = AttentionWrapper(
         DecoderPrenetWrapper(GRUCell(256), is_training),
         BahdanauAttention(256, encoder_outputs, memory_sequence_length=input_lengths),
