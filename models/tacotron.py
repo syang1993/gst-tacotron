@@ -8,7 +8,6 @@ from .helpers import TacoTestHelper, TacoTrainingHelper
 from .modules import encoder_cbhg, post_cbhg, prenet, reference_encoder
 from .rnn_wrappers import DecoderPrenetWrapper, ConcatOutputAndAttentionWrapper, ZoneoutWrapper
 from .multihead_attention import MultiheadAttention
-from .gmm_attention import GMMAttention
 
 
 class Tacotron():
@@ -96,19 +95,12 @@ class Tacotron():
       encoder_outputs = tf.concat([encoder_outputs, style_embeddings], axis=-1)
 
       # Attention
-      if hp.gmm_attention:
-        attention_mechanism = GMMAttention(
-          num_units=256,
-          num_attn_mixture=hp.num_attn_mixture, 
-          memory=encoder_outputs, 
-          memory_sequence_length=input_lengths)
-      else:
-        attention_mechanism = BahdanauAttention(
-          256, encoder_outputs, memory_sequence_length=input_lengths)
+      attention_mechanism = BahdanauAttention(
+        256, encoder_outputs, memory_sequence_length=input_lengths)
 
       attention_cell = AttentionWrapper(
         DecoderPrenetWrapper(GRUCell(256), is_training),
-        attention_mechanism,
+        BahdanauAttention(256, encoder_outputs, memory_sequence_length=input_lengths),
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, 256]
 

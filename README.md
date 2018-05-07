@@ -67,14 +67,6 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 
   Since the paper didn't talk about the details of the style-attention layer, I'm a little confused about the global style tokens. For the token embedding (GSTs) size, the paper said that they set the size to 256/h, where `h` is the number of heads. I'm not sure whether I should initialize the same or different GSTs as attention memory for all heads.
 
-## Todo:
-- [x] Update the attention mechanism for global style attention paper [Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis](https://arxiv.org/abs/1803.09017)
-- [x] Evaluation process and demos
-- [x] Usage for this repo.
-- [ ] Add GMM-attention for the paper [Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron](https://arxiv.org/abs/1803.09047).
-- [ ] Multi-speaker model
-
-
 ## Reference
   -  Keithito's implementation of tacotron: https://github.com/keithito/tacotron
   -  Yuxuan Wang, Daisy Stanton, Yu Zhang, RJ Skerry-Ryan, Eric Battenberg, Joel Shor, Ying Xiao, Fei Ren, Ye Jia, Rif A. Saurous. 2018. [Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis](https://arxiv.org/abs/1803.09017)
