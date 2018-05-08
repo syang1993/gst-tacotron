@@ -142,4 +142,5 @@ class GMMAttentionWrapper(RNNCell):
           maybe_all_histories[0]
       )
 
-      return tf.concat([query, cell_out], axis=-1), new_state
+      #return tf.concat([query, cell_out], axis=-1), new_state
+      return cell_out, new_state
