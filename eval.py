@@ -29,6 +29,7 @@ def run_eval(args):
     ref_wav = audio.load_wav(args.reference_audio)
     reference_mel = audio.melspectrogram(ref_wav).astype(np.float32).T
     path = '%s_ref-%s.wav' % (base_path, os.path.splitext(os.path.basename(args.reference_audio))[0])
+    alignment_path = '%s_ref-%s-align.png' % (base_path, os.path.splitext(os.path.basename(args.reference_audio))[0])
   else:
     if hparams.use_gst:
       print("*******************************")
@@ -42,7 +43,8 @@ def run_eval(args):
   with open(path, 'wb') as f:
     print('Synthesizing: %s' % args.text)
     print('Output wav file: %s' % path)
-    f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel))
+    print('Output alignments: %s' % alignment_path)
+    f.write(synth.synthesize(args.text, mel_targets=mel_targets, reference_mel=reference_mel, alignment_path=alignment_path))
 
 
 def main():

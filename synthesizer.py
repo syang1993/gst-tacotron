@@ -5,7 +5,7 @@ from hparams import hparams
 from librosa import effects
 from models import create_model
 from text import text_to_sequence
-from util import audio
+from util import audio, plot
 
 
 class Synthesizer:
@@ -27,6 +27,7 @@ class Synthesizer:
       self.model = create_model(model_name, hparams)
       self.model.initialize(inputs, input_lengths, mel_targets=mel_targets, reference_mel=reference_mel)
       self.wav_output = audio.inv_spectrogram_tensorflow(self.model.linear_outputs[0])
+      self.alignments = self.model.alignments[0]
 
     print('Loading checkpoint: %s' % checkpoint_path)
     self.session = tf.Session()
@@ -35,7 +36,7 @@ class Synthesizer:
     saver.restore(self.session, checkpoint_path)
 
 
-  def synthesize(self, text, mel_targets=None, reference_mel=None):
+  def synthesize(self, text, mel_targets=None, reference_mel=None, alignment_path=None):
     cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
     seq = text_to_sequence(text, cleaner_names)
     feed_dict = {
@@ -49,9 +50,12 @@ class Synthesizer:
       reference_mel = np.expand_dims(reference_mel, 0)
       feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
 
-    wav = self.session.run(self.wav_output, feed_dict=feed_dict)
+    wav, alignments = self.session.run([self.wav_output, self.alignments], feed_dict=feed_dict)
     wav = audio.inv_preemphasis(wav)
-    wav = wav[:audio.find_endpoint(wav)]
+    end_point = audio.find_endpoint(wav)
+    wav = wav[:end_point]
     out = io.BytesIO()
     audio.save_wav(wav, out)
+    n_frame = int(end_point / (hparams.frame_shift_ms / 1000* hparams.sample_rate)) + 1
+    plot.plot_alignment(alignments[:,:n_frame], alignment_path, info='%s' % (text))
     return out.getvalue()

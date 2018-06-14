@@ -40,14 +40,14 @@ class Tacotron():
 
       # Embeddings
       embedding_table = tf.get_variable(
-        'text_embedding', [len(symbols), 256], dtype=tf.float32,
+        'text_embedding', [len(symbols), hp.embed_depth], dtype=tf.float32,
         initializer=tf.truncated_normal_initializer(stddev=0.5))
       embedded_inputs = tf.nn.embedding_lookup(embedding_table, inputs)           # [N, T_in, 256]
       
       if hp.use_gst:
         #Global style tokens (GST)
         gst_tokens = tf.get_variable(
-          'style_tokens', [hp.num_gst, 256 // hp.num_heads], dtype=tf.float32,
+          'style_tokens', [hp.num_gst, hp.style_embed_depth // hp.num_heads], dtype=tf.float32,
           initializer=tf.truncated_normal_initializer(stddev=0.5))
         self.gst_tokens = gst_tokens
  
@@ -62,23 +62,22 @@ class Tacotron():
         # Reference encoder
         refnet_outputs = reference_encoder(
           reference_mel, 
-          filters=[32, 32, 64, 64, 128, 128], 
+          filters=hp.reference_filters, 
           kernel_size=(3,3),
           strides=(2,2),
-          encoder_cell=GRUCell(128),
+          encoder_cell=GRUCell(hp.reference_depth),
           is_training=is_training)                                                 # [N, 128]
         self.refnet_outputs = refnet_outputs                                       
 
         if hp.use_gst:
           # Style attention
           style_attention = MultiheadAttention(
-            tf.tanh(tf.expand_dims(refnet_outputs, axis=1)),                                   # [N, 1, 128]
-            tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1]),            # [N, hp.num_gst, 256/hp.num_heads]   
+            tf.expand_dims(refnet_outputs, axis=1),                                   # [N, 1, 128]
+            tf.tanh(tf.tile(tf.expand_dims(gst_tokens, axis=0), [batch_size,1,1])),            # [N, hp.num_gst, 256/hp.num_heads]   
             num_heads=hp.num_heads,
-            num_units=128,
+            num_units=hp.style_att_dim,
             attention_type=hp.style_att_type)
 
-          # Apply tanh to compress both encoder state and style embedding to the same scale.
           style_embeddings = style_attention.multi_head_attention()                   # [N, 1, 256]
         else:
           style_embeddings = tf.expand_dims(refnet_outputs, axis=1)                   # [N, 1, 128]
@@ -95,8 +94,8 @@ class Tacotron():
 
       # Attention
       attention_cell = AttentionWrapper(
-        DecoderPrenetWrapper(GRUCell(256), is_training),
-        BahdanauAttention(256, encoder_outputs, memory_sequence_length=input_lengths),
+        GRUCell(hp.attention_depth),
+        BahdanauAttention(hp.attention_depth, encoder_outputs, memory_sequence_length=input_lengths),
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, 256]
 
@@ -105,9 +104,9 @@ class Tacotron():
 
       # Decoder (layers specified bottom to top):
       decoder_cell = MultiRNNCell([
-          OutputProjectionWrapper(concat_cell, 256),
-          ResidualWrapper(ZoneoutWrapper(LSTMCell(256), 0.1)),
-          ResidualWrapper(ZoneoutWrapper(LSTMCell(256), 0.1))
+          OutputProjectionWrapper(concat_cell, hp.rnn_depth),
+          ResidualWrapper(ZoneoutWrapper(LSTMCell(hp.rnn_depth), 0.1)),
+          ResidualWrapper(ZoneoutWrapper(LSTMCell(hp.rnn_depth), 0.1))
         ], state_is_tuple=True)                                                  # [N, T_in, 256]
 
       # Project onto r mel spectrograms (predict r outputs at each RNN step):
@@ -115,9 +114,9 @@ class Tacotron():
       decoder_init_state = output_cell.zero_state(batch_size=batch_size, dtype=tf.float32)
 
       if is_training or is_teacher_force_generating:
-        helper = TacoTrainingHelper(inputs, mel_targets, hp.num_mels, hp.outputs_per_step)
+        helper = TacoTrainingHelper(inputs, mel_targets, hp)
       else:
-        helper = TacoTestHelper(batch_size, hp.num_mels, hp.outputs_per_step)
+        helper = TacoTestHelper(batch_size, hp)
 
       (decoder_outputs, _), final_decoder_state, _ = tf.contrib.seq2seq.dynamic_decode(
         BasicDecoder(output_cell, helper, decoder_init_state),
