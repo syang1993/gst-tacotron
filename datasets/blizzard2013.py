@@ -2,8 +2,10 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import numpy as np
 import os
+from hparams import hparams
 from util import audio
 
+_max_out_length = 1200
 
 def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
   '''Preprocesses the LJ Speech dataset from a given input path into a given output directory.
@@ -30,7 +32,8 @@ def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
       text = parts[1]
       futures.append(executor.submit(partial(_process_utterance, out_dir, index, wav_path, text)))
       index += 1
-  return [future.result() for future in tqdm(futures)]
+  results = [future.result() for future in tqdm(futures)]
+  return [r for r in results if r is not None]
 
 
 def _process_utterance(out_dir, index, wav_path, text):
@@ -51,6 +54,9 @@ def _process_utterance(out_dir, index, wav_path, text):
 
   # Load the audio to a numpy array:
   wav = audio.load_wav(wav_path)
+  max_samples = _max_out_length * hparams.frame_shift_ms / 1000 * hparams.sample_rate
+  if len(wav) > max_samples:
+    return None
 
   # Compute the linear-scale spectrogram from the wav:
   spectrogram = audio.spectrogram(wav).astype(np.float32)

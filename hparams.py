@@ -18,7 +18,6 @@ hparams = tf.contrib.training.HParams(
   ref_level_db=20,
 
   # Model:
-  # TODO: add more configurable hparams
   outputs_per_step=2,
   embed_depth=256,
   prenet_depths=[256, 128],
