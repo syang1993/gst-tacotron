@@ -6,6 +6,7 @@ from librosa import effects
 from models import create_model
 from text import text_to_sequence
 from util import audio, plot
+import textwrap
 
 
 class Synthesizer:
@@ -57,5 +58,6 @@ class Synthesizer:
     out = io.BytesIO()
     audio.save_wav(wav, out)
     n_frame = int(end_point / (hparams.frame_shift_ms / 1000* hparams.sample_rate)) + 1
+    text = '\n'.join(textwrap.wrap(text, 70, break_long_words=False))
     plot.plot_alignment(alignments[:,:n_frame], alignment_path, info='%s' % (text))
     return out.getvalue()
