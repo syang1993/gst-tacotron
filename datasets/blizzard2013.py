@@ -5,7 +5,7 @@ import os
 from hparams import hparams
 from util import audio
 
-_max_out_length = 1200
+_max_out_length = None
 
 def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
   '''Preprocesses the LJ Speech dataset from a given input path into a given output directory.
@@ -55,7 +55,7 @@ def _process_utterance(out_dir, index, wav_path, text):
   # Load the audio to a numpy array:
   wav = audio.load_wav(wav_path)
   max_samples = _max_out_length * hparams.frame_shift_ms / 1000 * hparams.sample_rate
-  if len(wav) > max_samples:
+  if len(wav) > max_samples and _max_out_length is not None:
     return None
 
   # Compute the linear-scale spectrogram from the wav:
