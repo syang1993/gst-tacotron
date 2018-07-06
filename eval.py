@@ -37,6 +37,7 @@ def run_eval(args):
              "which may generate unintelligible audio sometimes.")
       print("*******************************")
       path = '%s_ref-randomWeight.wav' % (base_path)
+      alignment_path = '%s_ref-%s-align.png' % (base_path, 'randomWeight')
     else:
       raise ValueError("You must set the reference audio if you don't want to use GSTs.")
 
