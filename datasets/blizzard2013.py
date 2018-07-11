@@ -5,7 +5,7 @@ import os
 from hparams import hparams
 from util import audio
 
-_max_out_length = None
+_max_out_length = 2500
 
 def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
   '''Preprocesses the LJ Speech dataset from a given input path into a given output directory.
