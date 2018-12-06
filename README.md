@@ -6,7 +6,7 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 ### Audio Samples
 
   * **[Audio Samples](https:///syang1993.github.io/gst-tacotron/)** from models trained using this repo with default hyper-params.
-    * This set was trained using the [Blizzard 2013 dataset](https://www.synsig.org/index.php/Blizzard_Challenge_2013) with and without global style tokens (GSTs).
+    * This set was trained using the [Blizzard 2013 dataset](http://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/) with and without global style tokens (GSTs).
       * I found the synthesized audio can learn the prosody of the reference audio.
       * The audio quality isn't so good as the paper. Maybe more data, more training steps and the wavenet vocoder will improve the quality, as well as better attention mechanism.
       
@@ -30,7 +30,7 @@ A tensorflow implementation of the [Style Tokens: Unsupervised Style Modeling, C
 
    The following are supported out of the box:
     * [LJ Speech](https://keithito.com/LJ-Speech-Dataset/) (Public Domain)
-    * [Blizzard 2013](https://www.synsig.org/index.php/Blizzard_Challenge_2013) (Creative Commons Attribution Share-Alike)
+    * [Blizzard 2013](http://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/) (Creative Commons Attribution Share-Alike)
 
    We use the Blizzard 2013 dataset to test this repo (Google's paper used 147 hours data read by the 2013 Blizzard Challenge speaker). This year Challenge provides about 200 hours unsegmented speech and 9741 segmented waveforms, I did all the experiments based the 9741 segmented waveforms since it's hard for me to split the unsegmented data.
 
